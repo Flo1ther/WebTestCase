@@ -6,3 +6,15 @@ django-filter>=24.3,<25.3
 dj-database-url>=2.2,<2.4
 psycopg[binary]>=3.2,<3.3
 python-dotenv>=1.0,<1.1
+drf-spectacular>=0.28,<0.29
+pytest>=8.3,<8.4
+pytest-django>=4.9,<4.10
+
+argon2-cffi>=25.1,<26
+cryptography>=46,<47
+Authlib>=1.6.5,<1.7
+PyOTP>=2.9,<3
+qrcode>=8,<9
+requests>=2.32,<3
+
+gunicorn>=23,<24

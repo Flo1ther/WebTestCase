@@ -6,6 +6,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.get_full_name", read_only=True)
     test_case_count = serializers.IntegerField(read_only=True)
     progress = serializers.FloatField(read_only=True)
+    requirements_count = serializers.IntegerField(read_only=True)
+    ai_context = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Project

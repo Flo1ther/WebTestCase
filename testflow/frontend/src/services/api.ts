@@ -1,6 +1,6 @@
 import axios from 'axios'
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api' })
-api.interceptors.request.use(config => { const token = localStorage.getItem('access'); if (token) config.headers.Authorization = `Bearer ${token}`; return config })
-api.interceptors.response.use(r => r, async error => { const request = error.config; if (error.response?.status === 401 && !request?._retried && localStorage.getItem('refresh')) { request._retried = true; try { const {data} = await axios.post(`${api.defaults.baseURL}/auth/refresh/`, {refresh:localStorage.getItem('refresh')}); localStorage.setItem('access',data.access); request.headers.Authorization=`Bearer ${data.access}`; return api(request) } catch { localStorage.clear(); window.dispatchEvent(new Event('auth-expired')) } } return Promise.reject(error) })
-export const errorText = (e: unknown) => { const x:any=e; if (!x.response) return 'Network error. Check that the server is running.'; const data=x.response.data; return typeof data==='string'?data:Object.values(data).flat().join(' ') || `Request failed (${x.response.status}).` }
+const api=axios.create({baseURL:'/api',withCredentials:true,xsrfCookieName:'csrftoken',xsrfHeaderName:'X-CSRFToken',timeout:30000})
+export async function csrf(){await api.get('/csrf/')}
+api.interceptors.request.use(async config=>{if(!['get','head','options'].includes(config.method||'get')&&!document.cookie.split(';').some(v=>v.trim().startsWith('csrftoken=')))await csrf();return config})
+export function errorText(error:unknown){const e=error as any;if(!e.response)return 'Немає з’єднання із сервером. Перевірте запуск застосунку.';const flatten=(v:any):string[]=>typeof v==='string'?[v]:Array.isArray(v)?v.flatMap(flatten):v&&typeof v==='object'?Object.values(v).flatMap(flatten):[];return flatten(e.response.data?.errors||e.response.data?.error||e.response.data).join(' ')||`Запит відхилено (${e.response.status}).`}
 export default api

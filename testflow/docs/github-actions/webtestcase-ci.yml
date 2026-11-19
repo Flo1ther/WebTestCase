@@ -1,0 +1,65 @@
+# Copy this file to the target repository as .github/workflows/webtestcase-ci.yml.
+# Required GitHub repository secrets:
+#   WEBTESTCASE_CALLBACK_URL  e.g. https://your-public-domain/api/integrations/github/callback/
+#   WEBTESTCASE_WEBHOOK_SECRET  same value as GITHUB_WEBHOOK_SECRET in WebTestCase .env
+name: WebTestCase CI callback
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run project tests
+        id: tests
+        run: |
+          # Replace these two lines with the real test command of this repository.
+          python -m pip install pytest
+          python -m pytest
+      - name: Send signed result to WebTestCase
+        if: always()
+        env:
+          CALLBACK_URL: ${{ secrets.WEBTESTCASE_CALLBACK_URL }}
+          CALLBACK_SECRET: ${{ secrets.WEBTESTCASE_WEBHOOK_SECRET }}
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          python - <<'PY'
+          import hashlib, hmac, json, os, urllib.request
+
+          # Optionally create this file during your tests. Every result is mapped
+          # to a WebTestCase Test Case by automation_key.
+          # {"tests": [{"automation_key":"TC-AUTH-LOGIN","status":"PASSED",
+          #              "actual_result":"pytest: test_login passed"}]}
+          tests = []
+          if os.path.exists("webtestcase-results.json"):
+              with open("webtestcase-results.json", encoding="utf-8") as report:
+                  tests = json.load(report).get("tests", [])
+          outcome = os.environ["TEST_OUTCOME"].upper()
+          payload = {
+              "repository": os.environ["REPOSITORY"], "run_id": os.environ["RUN_ID"],
+              "workflow": "WebTestCase CI callback", "branch": os.environ["BRANCH"],
+              "commit_sha": os.environ["COMMIT_SHA"], "commit_message": os.environ.get("COMMIT_MESSAGE", ""),
+              "run_url": os.environ["RUN_URL"], "status": "COMPLETED",
+              "conclusion": "SUCCESS" if outcome == "SUCCESS" else "FAILURE", "tests": tests,
+          }
+          body = json.dumps(payload).encode()
+          signature = "sha256=" + hmac.new(os.environ["CALLBACK_SECRET"].encode(), body, hashlib.sha256).hexdigest()
+          request = urllib.request.Request(os.environ["CALLBACK_URL"], data=body, method="POST", headers={
+              "Content-Type": "application/json", "X-Hub-Signature-256": signature,
+          })
+          with urllib.request.urlopen(request, timeout=15) as response:
+              print(response.read().decode())
+          PY

@@ -9,3 +9,13 @@ frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
 *.sqlite3
+
+.local/
+*.log
+artifacts/
+
+# Locally generated Word/PDF reports and render-preview files are not source code.
+docs/*.docx
+docs/*.pdf
+docs/_*/
+docs/mso*.tmp

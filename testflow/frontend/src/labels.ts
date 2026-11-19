@@ -1,0 +1,2 @@
+const labels:Record<string,string>={Stable:'Стабільний',Unstable:'Нестабільний','Needs Attention':'Потребує уваги',ADMIN:'Адміністратор',MANAGER:'Менеджер',TESTER:'Тестувальник',PASSED:'Пройдено',FAILED:'Не пройдено',BLOCKED:'Заблоковано',NOT_RUN:'Не виконано',OPEN:'Відкрито',IN_PROGRESS:'У процесі',RESOLVED:'Усунуто',CLOSED:'Закрито',CRITICAL:'Критичний',HIGH:'Високий',MEDIUM:'Середній',LOW:'Низький'}
+export const label=(value:string)=>labels[value]||value

@@ -1,0 +1,11 @@
+.env
+.venv
+.local
+.git
+**/__pycache__
+frontend/node_modules
+frontend/dist
+docs/report_assets
+docs/report_qa
+artifacts
+*.log

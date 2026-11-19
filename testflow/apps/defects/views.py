@@ -1,12 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
+from apps.audit.services import record_action
 from .models import Defect
 from .serializers import DefectSerializer
 
 
 class DefectViewSet(viewsets.ModelViewSet):
     serializer_class = DefectSerializer
-    filterset_fields = ["status", "test_case"]
+    filterset_fields = ["project", "requirement", "status", "test_case"]
     search_fields = ["title", "description"]
     ordering_fields = ["created_at", "status", "title"]
     def get_queryset(self):
@@ -15,13 +16,17 @@ class DefectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         case = serializer.validated_data["test_case"]
         if self.request.user.role == "TESTER" and case.assigned_to_id != self.request.user.id:
-            raise PermissionDenied("You can report defects only for assigned test cases.")
-        serializer.save(reported_by=self.request.user)
+            raise PermissionDenied('Ви можете повідомляти про дефекти лише призначених вам тесткейсів.')
+        defect = serializer.save(reported_by=self.request.user)
+        record_action(user=self.request.user, action="DEFECT_CREATED", entity_type="Defect", entity_id=defect.id, metadata={"test_case_id": defect.test_case_id, "status": defect.status})
     def perform_update(self, serializer):
         if self.request.user.role == "TESTER":
-            raise PermissionDenied("Only a manager or administrator can update a defect.")
-        serializer.save()
+            raise PermissionDenied('Оновлювати дефекти можуть лише менеджери й адміністратори.')
+        before_status = self.get_object().status
+        defect = serializer.save()
+        if before_status != defect.status:
+            record_action(user=self.request.user, action="DEFECT_STATUS_CHANGED", entity_type="Defect", entity_id=defect.id, metadata={"from": before_status, "to": defect.status})
     def perform_destroy(self, instance):
         if self.request.user.role not in {"ADMIN", "MANAGER"}:
-            raise PermissionDenied("Only a manager or administrator can delete a defect.")
+            raise PermissionDenied('Видаляти дефекти можуть лише менеджери й адміністратори.')
         instance.delete()

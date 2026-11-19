@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.management.base import CommandError
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.accounts.models import User
@@ -10,6 +12,7 @@ class Command(BaseCommand):
         parser.add_argument("email", help="Email address of the administrator to restore")
 
     def handle(self, *args, **options):
+        if not settings.DEBUG: raise CommandError("Ця навчальна команда доступна лише в DEBUG-середовищі.")
         try:
             user = User.objects.get(email__iexact=options["email"])
         except User.DoesNotExist as exc:
